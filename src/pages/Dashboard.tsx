@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllDecisions, getDueReviews } from '../lib/decisionService';
-import { calculateStats, type Stats } from '../lib/stats';
+import { calculateStats, calculateTimeSeries, type Stats, type TimeSeriesDataPoint } from '../lib/stats';
 import { checkAndNotifyDueReviews } from '../lib/notifications';
 import type { Decision } from '../lib/types';
 import { DecisionCard } from '../components/DecisionCard';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts';
 
 export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [timeSeries, setTimeSeries] = useState<TimeSeriesDataPoint[]>([]);
   const [dueReviews, setDueReviews] = useState<Decision[]>([]);
   const [recentDecisions, setRecentDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ export function Dashboard() {
         setError('');
         const decisions = await getAllDecisions();
         setStats(calculateStats(decisions));
+        setTimeSeries(calculateTimeSeries(decisions));
         const due = await getDueReviews();
         setDueReviews(due);
         setRecentDecisions(
@@ -96,6 +98,66 @@ export function Dashboard() {
               : stats.calibrationGap < -10
               ? `You tend to be underconfident by ~${Math.abs(stats.calibrationGap)} points. Trust yourself more!`
               : `You're well-calibrated! Your confidence matches your actual outcomes.`}
+          </p>
+        </div>
+      )}
+
+      {timeSeries.length >= 2 && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h2 className="font-medium mb-4">Trends Over Time</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={timeSeries.map(d => ({
+                  ...d,
+                  // Convert rating to 0-100 scale for comparison
+                  ratingScaled: d.rating ? (d.rating - 1) * 25 : null,
+                }))}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis
+                  dataKey="date"
+                  fontSize={12}
+                  tickFormatter={d => {
+                    const [year, month] = d.split('-');
+                    return `${month}/${year.slice(2)}`;
+                  }}
+                />
+                <YAxis domain={[0, 100]} fontSize={12} />
+                <Tooltip
+                  formatter={(value: number, name: string) => {
+                    if (name === 'confidence') return [`${value}%`, 'Avg Confidence'];
+                    if (name === 'ratingScaled') return [`${Math.round(value / 25 + 1)}/5`, 'Avg Rating'];
+                    return [value, name];
+                  }}
+                  labelFormatter={label => {
+                    const [year, month] = label.split('-');
+                    return `${month}/${year}`;
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="confidence"
+                  stroke="#3b82f6"
+                  name="confidence"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="ratingScaled"
+                  stroke="#22c55e"
+                  name="ratingScaled"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Blue: Average confidence | Green: Average rating (scaled to 0-100)
           </p>
         </div>
       )}

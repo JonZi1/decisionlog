@@ -10,7 +10,8 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { path: '/', label: 'Dashboard' },
     { path: '/decisions', label: 'Decisions' },
-    { path: '/new', label: 'New Decision' },
+    { path: '/new', label: 'New' },
+    { path: '/categories', label: 'Categories' },
     { path: '/settings', label: 'Settings' },
   ];
 

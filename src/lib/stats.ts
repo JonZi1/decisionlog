@@ -11,6 +11,41 @@ export interface Stats {
   categoryBreakdown: Record<string, { count: number; avgRating: number }>;
 }
 
+export interface TimeSeriesDataPoint {
+  date: string;
+  confidence: number;
+  rating: number | null;
+  count: number;
+}
+
+export function calculateTimeSeries(decisions: Decision[]): TimeSeriesDataPoint[] {
+  // Group decisions by month
+  const monthlyData: Record<string, { confidences: number[]; ratings: number[] }> = {};
+
+  for (const d of decisions) {
+    const month = d.date.slice(0, 7); // YYYY-MM
+    if (!monthlyData[month]) {
+      monthlyData[month] = { confidences: [], ratings: [] };
+    }
+    monthlyData[month].confidences.push(d.confidence);
+    if (d.rating) {
+      monthlyData[month].ratings.push(d.rating);
+    }
+  }
+
+  // Convert to array and sort
+  return Object.entries(monthlyData)
+    .map(([date, data]) => ({
+      date,
+      confidence: Math.round(data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length),
+      rating: data.ratings.length > 0
+        ? Math.round((data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length) * 10) / 10
+        : null,
+      count: data.confidences.length,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function calculateStats(decisions: Decision[]): Stats {
   const reviewed = decisions.filter(d => d.reviewedAt && d.rating);
   const today = new Date();
