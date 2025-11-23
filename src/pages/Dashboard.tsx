@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllDecisions, getDueReviews } from '../lib/decisionService';
 import { calculateStats, type Stats } from '../lib/stats';
+import { checkAndNotifyDueReviews } from '../lib/notifications';
 import type { Decision } from '../lib/types';
 import { DecisionCard } from '../components/DecisionCard';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -19,10 +21,13 @@ export function Dashboard() {
         setError('');
         const decisions = await getAllDecisions();
         setStats(calculateStats(decisions));
-        setDueReviews(await getDueReviews());
+        const due = await getDueReviews();
+        setDueReviews(due);
         setRecentDecisions(
           decisions.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
         );
+        // Check for notifications
+        checkAndNotifyDueReviews(due.length);
       } catch (err) {
         setError('Failed to load decisions. Please refresh the page.');
         console.error('Dashboard load error:', err);
@@ -91,6 +96,44 @@ export function Dashboard() {
               : stats.calibrationGap < -10
               ? `You tend to be underconfident by ~${Math.abs(stats.calibrationGap)} points. Trust yourself more!`
               : `You're well-calibrated! Your confidence matches your actual outcomes.`}
+          </p>
+        </div>
+      )}
+
+      {Object.keys(stats.categoryBreakdown).length > 0 && (
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h2 className="font-medium mb-4">Performance by Category</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={Object.entries(stats.categoryBreakdown).map(([name, data]) => ({
+                  name: name.charAt(0).toUpperCase() + name.slice(1),
+                  rating: Math.round(data.avgRating * 10) / 10,
+                  count: data.count,
+                }))}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis dataKey="name" fontSize={12} />
+                <YAxis domain={[0, 5]} fontSize={12} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    name === 'rating' ? `${value}/5` : value,
+                    name === 'rating' ? 'Avg Rating' : 'Decisions'
+                  ]}
+                />
+                <Bar dataKey="rating" name="rating">
+                  {Object.entries(stats.categoryBreakdown).map(([, data], index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={data.avgRating >= 4 ? '#22c55e' : data.avgRating >= 3 ? '#eab308' : '#ef4444'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Average rating by category (green = 4+, yellow = 3+, red = &lt;3)
           </p>
         </div>
       )}

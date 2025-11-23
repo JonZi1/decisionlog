@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { exportData, importDataWithValidation, type ImportMode } from '../lib/decisionService';
+import { exportData, importDataWithValidation, getAllDecisions, type ImportMode } from '../lib/decisionService';
 import { validateDecisions, parseImportData, type ValidationResult } from '../lib/validation';
 import {
   getStoredToken,
@@ -10,6 +10,14 @@ import {
   syncFromGist,
   verifyToken,
 } from '../lib/gistSync';
+import { generateICSForMultiple, downloadICS } from '../lib/calendar';
+import {
+  areNotificationsSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+  areNotificationsEnabled,
+  setNotificationsEnabled,
+} from '../lib/notifications';
 import type { Decision } from '../lib/types';
 
 interface ImportPreview {
@@ -31,11 +39,43 @@ export function Settings() {
   const [gistId, setGistId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
+  // Notifications state
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
   useEffect(() => {
     const token = getStoredToken();
     setHasToken(!!token);
     setGistId(getStoredGistId());
+    setNotificationsEnabledState(areNotificationsEnabled());
+    setNotificationPermission(getNotificationPermission());
   }, []);
+
+  const handleToggleNotifications = async () => {
+    if (!areNotificationsSupported()) {
+      setError('Browser notifications are not supported');
+      return;
+    }
+
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      setNotificationsEnabledState(false);
+      setMessage('Notifications disabled');
+    } else {
+      if (notificationPermission !== 'granted') {
+        const granted = await requestNotificationPermission();
+        setNotificationPermission(getNotificationPermission());
+        if (!granted) {
+          setError('Notification permission denied');
+          return;
+        }
+      }
+      setNotificationsEnabled(true);
+      setNotificationsEnabledState(true);
+      setMessage('Notifications enabled');
+    }
+    setError('');
+  };
 
   const handleExport = async () => {
     const data = await exportData();
@@ -47,6 +87,21 @@ export function Settings() {
     a.click();
     URL.revokeObjectURL(url);
     setMessage('Export complete!');
+    setError('');
+  };
+
+  const handleCalendarExport = async () => {
+    const decisions = await getAllDecisions();
+    const pendingReviews = decisions.filter(d => !d.reviewedAt);
+
+    if (pendingReviews.length === 0) {
+      setError('No pending reviews to export');
+      return;
+    }
+
+    const ics = generateICSForMultiple(pendingReviews);
+    downloadICS(ics, `decision-reviews-${new Date().toISOString().split('T')[0]}.ics`);
+    setMessage(`Exported ${pendingReviews.length} review reminders to calendar`);
     setError('');
   };
 
@@ -180,12 +235,20 @@ export function Settings() {
           <p className="text-sm text-gray-600 mb-4">
             Download all your decisions as a JSON file for backup.
           </p>
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Export to JSON
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleExport}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Export to JSON
+            </button>
+            <button
+              onClick={handleCalendarExport}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              Export to Calendar
+            </button>
+          </div>
         </div>
 
         <hr />
@@ -267,6 +330,35 @@ export function Settings() {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+
+        <hr />
+
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Notifications</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Get browser notifications when decisions are due for review.
+          </p>
+          {areNotificationsSupported() ? (
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={notificationsEnabled}
+                onChange={handleToggleNotifications}
+                className="rounded"
+              />
+              <span className="text-sm">
+                Enable review reminders
+                {notificationPermission === 'denied' && (
+                  <span className="text-red-500 ml-2">(Permission blocked)</span>
+                )}
+              </span>
+            </label>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Browser notifications are not supported in this browser.
+            </p>
           )}
         </div>
 

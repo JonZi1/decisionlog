@@ -69,6 +69,9 @@ export function DecisionDetail() {
     rating: Rating;
     lessonsLearned: string;
     sameChoiceAgain: boolean;
+    outcomeMatchedExpectation?: 'exceeded' | 'met' | 'partial' | 'missed';
+    contributingFactors?: string[];
+    decisionQuality?: 'excellent' | 'good' | 'fair' | 'poor';
   }) => {
     await updateDecision(decision.id, {
       ...data,

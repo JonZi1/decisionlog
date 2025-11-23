@@ -24,7 +24,25 @@ export interface Decision {
   rating?: Rating;
   lessonsLearned?: string;
   sameChoiceAgain?: boolean;
+
+  // Structured review fields (optional)
+  outcomeMatchedExpectation?: 'exceeded' | 'met' | 'partial' | 'missed';
+  contributingFactors?: string[];
+  decisionQuality?: 'excellent' | 'good' | 'fair' | 'poor';
 }
+
+export const CONTRIBUTING_FACTORS = [
+  'Good information',
+  'Right timing',
+  'Proper research',
+  'Intuition',
+  'Luck',
+  'Poor information',
+  'Bad timing',
+  'External factors',
+  'Rushed decision',
+  'Overthinking',
+];
 
 export interface DecisionFilters {
   category?: string;
