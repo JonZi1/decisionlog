@@ -225,22 +225,48 @@ export function DecisionDetail() {
               <h3 className="font-medium text-gray-700 mb-1">Actual outcome</h3>
               <p className="text-sm text-gray-600">{decision.actualOutcome}</p>
             </div>
-            <div>
-              <h3 className="font-medium text-gray-700 mb-1">Rating</h3>
-              <p className="text-sm text-gray-600">{decision.rating}/5</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium text-gray-700 mb-1">Rating</h3>
+                <p className="text-sm text-gray-600">{decision.rating}/5</p>
+              </div>
+              {decision.outcomeMatchedExpectation && (
+                <div>
+                  <h3 className="font-medium text-gray-700 mb-1">Met expectations?</h3>
+                  <p className="text-sm text-gray-600 capitalize">{decision.outcomeMatchedExpectation}</p>
+                </div>
+              )}
+              {decision.decisionQuality && (
+                <div>
+                  <h3 className="font-medium text-gray-700 mb-1">Decision quality</h3>
+                  <p className="text-sm text-gray-600 capitalize">{decision.decisionQuality}</p>
+                </div>
+              )}
+              <div>
+                <h3 className="font-medium text-gray-700 mb-1">Would choose again?</h3>
+                <p className="text-sm text-gray-600">
+                  {decision.sameChoiceAgain ? 'Yes' : 'No'}
+                </p>
+              </div>
             </div>
+            {decision.contributingFactors && decision.contributingFactors.length > 0 && (
+              <div>
+                <h3 className="font-medium text-gray-700 mb-1">Contributing factors</h3>
+                <div className="flex flex-wrap gap-2">
+                  {decision.contributingFactors.map(factor => (
+                    <span key={factor} className="text-xs px-2 py-1 bg-gray-100 rounded">
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {decision.lessonsLearned && (
               <div>
                 <h3 className="font-medium text-gray-700 mb-1">Lessons learned</h3>
                 <p className="text-sm text-gray-600">{decision.lessonsLearned}</p>
               </div>
             )}
-            <div>
-              <h3 className="font-medium text-gray-700 mb-1">Would choose again?</h3>
-              <p className="text-sm text-gray-600">
-                {decision.sameChoiceAgain ? 'Yes' : 'No'}
-              </p>
-            </div>
           </div>
         </div>
       ) : showReview ? (

@@ -9,6 +9,10 @@ export interface Stats {
   calibrationGap: number;
   decisionsThisMonth: number;
   categoryBreakdown: Record<string, { count: number; avgRating: number }>;
+  // Enhanced analytics
+  factorBreakdown: Record<string, { count: number; avgRating: number }>;
+  stakesByRating: Record<string, { count: number; avgRating: number; avgConfidence: number }>;
+  qualityVsOutcome: Record<string, { count: number; avgRating: number }>;
 }
 
 export interface TimeSeriesDataPoint {
@@ -80,6 +84,53 @@ export function calculateStats(decisions: Decision[]): Stats {
     categoryBreakdown[cat].avgRating /= categoryBreakdown[cat].count;
   }
 
+  // Factor breakdown - which factors correlate with good/bad outcomes
+  const factorBreakdown: Record<string, { count: number; avgRating: number }> = {};
+  for (const d of reviewed) {
+    if (d.contributingFactors) {
+      for (const factor of d.contributingFactors) {
+        if (!factorBreakdown[factor]) {
+          factorBreakdown[factor] = { count: 0, avgRating: 0 };
+        }
+        factorBreakdown[factor].count++;
+        factorBreakdown[factor].avgRating += d.rating || 0;
+      }
+    }
+  }
+  for (const factor of Object.keys(factorBreakdown)) {
+    factorBreakdown[factor].avgRating /= factorBreakdown[factor].count;
+  }
+
+  // Stakes by rating - calibration by stakes level
+  const stakesByRating: Record<string, { count: number; avgRating: number; avgConfidence: number }> = {};
+  for (const d of reviewed) {
+    if (!stakesByRating[d.stakes]) {
+      stakesByRating[d.stakes] = { count: 0, avgRating: 0, avgConfidence: 0 };
+    }
+    stakesByRating[d.stakes].count++;
+    stakesByRating[d.stakes].avgRating += d.rating || 0;
+    stakesByRating[d.stakes].avgConfidence += d.confidence;
+  }
+  for (const stake of Object.keys(stakesByRating)) {
+    stakesByRating[stake].avgRating /= stakesByRating[stake].count;
+    stakesByRating[stake].avgConfidence /= stakesByRating[stake].count;
+  }
+
+  // Decision quality vs outcome
+  const qualityVsOutcome: Record<string, { count: number; avgRating: number }> = {};
+  for (const d of reviewed) {
+    if (d.decisionQuality) {
+      if (!qualityVsOutcome[d.decisionQuality]) {
+        qualityVsOutcome[d.decisionQuality] = { count: 0, avgRating: 0 };
+      }
+      qualityVsOutcome[d.decisionQuality].count++;
+      qualityVsOutcome[d.decisionQuality].avgRating += d.rating || 0;
+    }
+  }
+  for (const quality of Object.keys(qualityVsOutcome)) {
+    qualityVsOutcome[quality].avgRating /= qualityVsOutcome[quality].count;
+  }
+
   return {
     totalDecisions: decisions.length,
     reviewedDecisions: reviewed.length,
@@ -89,6 +140,9 @@ export function calculateStats(decisions: Decision[]): Stats {
     calibrationGap: Math.round(calibrationGap),
     decisionsThisMonth: thisMonth.length,
     categoryBreakdown,
+    factorBreakdown,
+    stakesByRating,
+    qualityVsOutcome,
   };
 }
 
