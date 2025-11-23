@@ -21,22 +21,46 @@ export function DecisionForm({ onSubmit, initialData }: DecisionFormProps) {
   const [stakes, setStakes] = useState<Stakes>(initialData?.stakes || 'medium');
   const [horizonDays, setHorizonDays] = useState(initialData?.horizonDays || 30);
   const [tags, setTags] = useState(initialData?.tags?.join(', ') || '');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    // Validate options
+    const validOptions = options.map(o => o.trim()).filter(Boolean);
+    if (validOptions.length < 2) {
+      setError('Please enter at least 2 options');
+      return;
+    }
+
+    // Validate chosen option matches one of the options
+    const trimmedChosen = chosenOption.trim();
+    if (!validOptions.includes(trimmedChosen)) {
+      setError('Chosen option must match one of the options considered');
+      return;
+    }
+
+    // Normalize tags
+    const normalizedTags = tags
+      .split(',')
+      .map(t => t.trim().toLowerCase())
+      .filter(Boolean)
+      .filter((t, i, arr) => arr.indexOf(t) === i); // Remove duplicates
+
     onSubmit({
-      title,
+      title: title.trim(),
       date,
       category,
       decisionType,
-      options: options.filter(o => o.trim()),
-      chosenOption,
-      reasoning,
-      expectedOutcome,
+      options: validOptions,
+      chosenOption: trimmedChosen,
+      reasoning: reasoning.trim(),
+      expectedOutcome: expectedOutcome.trim(),
       confidence,
       stakes,
       horizonDays,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: normalizedTags,
     });
   };
 
@@ -50,6 +74,11 @@ export function DecisionForm({ onSubmit, initialData }: DecisionFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
+          {error}
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
         <input

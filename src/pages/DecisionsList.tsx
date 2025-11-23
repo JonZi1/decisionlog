@@ -10,11 +10,22 @@ export function DecisionsList() {
   const [filters, setFilters] = useState<DecisionFilters>({});
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
-      const results = await getFilteredDecisions(filters, sortField, sortOrder);
-      setDecisions(results);
+      try {
+        setLoading(true);
+        const results = await getFilteredDecisions(filters, sortField, sortOrder);
+        setDecisions(results);
+        setError('');
+      } catch (err) {
+        setError('Failed to load decisions');
+        console.error('DecisionsList load error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [filters, sortField, sortOrder]);
@@ -105,11 +116,22 @@ export function DecisionsList() {
       </div>
 
       <div className="space-y-3">
-        {decisions.map(d => (
-          <DecisionCard key={d.id} decision={d} />
-        ))}
-        {decisions.length === 0 && (
-          <p className="text-center text-gray-500 py-8">No decisions found</p>
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+            {error}
+          </div>
+        )}
+        {loading ? (
+          <p className="text-center text-gray-500 py-8">Loading...</p>
+        ) : (
+          <>
+            {decisions.map(d => (
+              <DecisionCard key={d.id} decision={d} />
+            ))}
+            {decisions.length === 0 && !error && (
+              <p className="text-center text-gray-500 py-8">No decisions found</p>
+            )}
+          </>
         )}
       </div>
     </div>

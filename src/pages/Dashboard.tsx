@@ -9,20 +9,47 @@ export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [dueReviews, setDueReviews] = useState<Decision[]>([]);
   const [recentDecisions, setRecentDecisions] = useState<Decision[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
-      const decisions = await getAllDecisions();
-      setStats(calculateStats(decisions));
-      setDueReviews(await getDueReviews());
-      setRecentDecisions(
-        decisions.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
-      );
+      try {
+        setLoading(true);
+        setError('');
+        const decisions = await getAllDecisions();
+        setStats(calculateStats(decisions));
+        setDueReviews(await getDueReviews());
+        setRecentDecisions(
+          decisions.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+        );
+      } catch (err) {
+        setError('Failed to load decisions. Please refresh the page.');
+        console.error('Dashboard load error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
 
-  if (!stats) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-gray-500">Loading decisions...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!stats) return null;
 
   return (
     <div className="space-y-8">

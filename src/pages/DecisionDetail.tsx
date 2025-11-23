@@ -12,18 +12,51 @@ export function DecisionDetail() {
   const [decision, setDecision] = useState<Decision | null>(null);
   const [showReview, setShowReview] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
-      if (id) {
-        const d = await getDecision(id);
-        setDecision(d || null);
+      try {
+        setLoading(true);
+        if (id) {
+          const d = await getDecision(id);
+          if (!d) {
+            setError('Decision not found');
+          } else {
+            setDecision(d);
+          }
+        }
+      } catch (err) {
+        setError('Failed to load decision');
+        console.error('DecisionDetail load error:', err);
+      } finally {
+        setLoading(false);
       }
     }
     load();
   }, [id]);
 
-  if (!decision) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-gray-500">Loading decision...</div>
+      </div>
+    );
+  }
+
+  if (error || !decision) {
+    return (
+      <div className="space-y-4">
+        <Link to="/decisions" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to decisions
+        </Link>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+          {error || 'Decision not found'}
+        </div>
+      </div>
+    );
+  }
 
   const today = new Date().toISOString().split('T')[0];
   const isDue = !decision.reviewedAt && decision.reviewDate <= today;
