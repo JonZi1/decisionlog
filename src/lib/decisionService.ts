@@ -101,8 +101,9 @@ export async function getDueReviews(): Promise<Decision[]> {
 }
 
 export async function exportData(): Promise<string> {
+  const { createExportData } = await import('./validation');
   const decisions = await getAllDecisions();
-  return JSON.stringify(decisions, null, 2);
+  return JSON.stringify(createExportData(decisions), null, 2);
 }
 
 export async function importData(jsonString: string): Promise<number> {
@@ -110,4 +111,31 @@ export async function importData(jsonString: string): Promise<number> {
   await db.decisions.clear();
   await db.decisions.bulkAdd(decisions);
   return decisions.length;
+}
+
+export type ImportMode = 'replace' | 'merge';
+
+export async function importDataWithValidation(
+  decisions: Decision[],
+  mode: ImportMode
+): Promise<{ imported: number; skipped: number }> {
+  if (mode === 'replace') {
+    await db.decisions.clear();
+    await db.decisions.bulkAdd(decisions);
+    return { imported: decisions.length, skipped: 0 };
+  }
+
+  // Merge mode: skip duplicates by id
+  const existing = await getAllDecisions();
+  const existingIds = new Set(existing.map(d => d.id));
+  const newDecisions = decisions.filter(d => !existingIds.has(d.id));
+
+  if (newDecisions.length > 0) {
+    await db.decisions.bulkAdd(newDecisions);
+  }
+
+  return {
+    imported: newDecisions.length,
+    skipped: decisions.length - newDecisions.length,
+  };
 }

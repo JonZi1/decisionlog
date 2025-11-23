@@ -5,6 +5,8 @@ import type { Decision, DecisionFilters, SortField, SortOrder, Stakes } from '..
 import { CATEGORIES } from '../lib/types';
 import { DecisionCard } from '../components/DecisionCard';
 
+const PAGE_SIZE = 20;
+
 export function DecisionsList() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [filters, setFilters] = useState<DecisionFilters>({});
@@ -12,6 +14,7 @@ export function DecisionsList() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     async function load() {
@@ -20,6 +23,7 @@ export function DecisionsList() {
         const results = await getFilteredDecisions(filters, sortField, sortOrder);
         setDecisions(results);
         setError('');
+        setPage(1); // Reset to first page when filters change
       } catch (err) {
         setError('Failed to load decisions');
         console.error('DecisionsList load error:', err);
@@ -29,6 +33,9 @@ export function DecisionsList() {
     }
     load();
   }, [filters, sortField, sortOrder]);
+
+  const totalPages = Math.ceil(decisions.length / PAGE_SIZE);
+  const paginatedDecisions = decisions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -125,11 +132,37 @@ export function DecisionsList() {
           <p className="text-center text-gray-500 py-8">Loading...</p>
         ) : (
           <>
-            {decisions.map(d => (
+            {decisions.length > 0 && (
+              <p className="text-sm text-gray-500">
+                Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, decisions.length)} of {decisions.length}
+              </p>
+            )}
+            {paginatedDecisions.map(d => (
               <DecisionCard key={d.id} decision={d} />
             ))}
             {decisions.length === 0 && !error && (
               <p className="text-center text-gray-500 py-8">No decisions found</p>
+            )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
             )}
           </>
         )}
