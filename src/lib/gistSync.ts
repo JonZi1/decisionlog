@@ -2,6 +2,7 @@ import { getAllDecisions } from './decisionService';
 import { createExportData, parseImportData, validateDecisions } from './validation';
 import type { Decision } from './types';
 import { db } from './db';
+import { createBackup } from './backup';
 
 const GIST_FILENAME = 'decision-log-backup.json';
 const TOKEN_KEY = 'decision-log-gist-token';
@@ -130,6 +131,9 @@ export async function fetchGist(token: string, gistId: string): Promise<{
 
 export async function syncFromGist(token: string, gistId: string): Promise<number> {
   const { decisions } = await fetchGist(token, gistId);
+
+  // Create backup before replacing data
+  await createBackup('Before pull from Gist');
 
   await db.decisions.clear();
   await db.decisions.bulkAdd(decisions);

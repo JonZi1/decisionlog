@@ -18,6 +18,7 @@ import {
   areNotificationsEnabled,
   setNotificationsEnabled,
 } from '../lib/notifications';
+import { getBackups, restoreBackup, deleteBackup, type Backup } from '../lib/backup';
 import type { Decision } from '../lib/types';
 
 interface ImportPreview {
@@ -43,13 +44,42 @@ export function Settings() {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
+  // Backup state
+  const [backups, setBackups] = useState<Backup[]>([]);
+  const [sessionOnly, setSessionOnly] = useState(false);
+
   useEffect(() => {
     const token = getStoredToken();
     setHasToken(!!token);
     setGistId(getStoredGistId());
     setNotificationsEnabledState(areNotificationsEnabled());
     setNotificationPermission(getNotificationPermission());
+    setBackups(getBackups());
   }, []);
+
+  const refreshBackups = () => {
+    setBackups(getBackups());
+  };
+
+  const handleRestoreBackup = async (backupId: string) => {
+    if (!confirm('This will replace all current data with the backup. Continue?')) return;
+
+    try {
+      const count = await restoreBackup(backupId);
+      setMessage(`Restored ${count} decisions from backup`);
+      setError('');
+      refreshBackups();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restore backup');
+    }
+  };
+
+  const handleDeleteBackup = (backupId: string) => {
+    if (!confirm('Delete this backup?')) return;
+    deleteBackup(backupId);
+    refreshBackups();
+    setMessage('Backup deleted');
+  };
 
   const handleToggleNotifications = async () => {
     if (!areNotificationsSupported()) {
@@ -364,6 +394,47 @@ export function Settings() {
 
         <hr />
 
+        {backups.length > 0 && (
+          <>
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Backups</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Automatic backups created before destructive operations. Restore if something goes wrong.
+              </p>
+              <div className="space-y-2">
+                {backups.map(backup => (
+                  <div
+                    key={backup.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{backup.reason}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(backup.timestamp).toLocaleString()} • {backup.decisions.length} decisions
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRestoreBackup(backup.id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBackup(backup.id)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <hr />
+          </>
+        )}
+
         <div>
           <h2 className="text-lg font-semibold mb-2">GitHub Gist Sync</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -376,6 +447,15 @@ export function Settings() {
                 Create a personal access token at GitHub Settings → Developer settings → Personal access tokens.
                 The token needs the "gist" scope.
               </p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={sessionOnly}
+                  onChange={e => setSessionOnly(e.target.checked)}
+                  className="rounded"
+                />
+                Session only (don't save token)
+              </label>
               <div className="flex gap-2">
                 <input
                   type="password"
@@ -383,6 +463,7 @@ export function Settings() {
                   onChange={e => setGistToken(e.target.value)}
                   placeholder="GitHub personal access token"
                   className="flex-1 px-3 py-2 border rounded-md text-sm"
+                  aria-label="GitHub personal access token"
                 />
                 <button
                   onClick={handleSaveToken}

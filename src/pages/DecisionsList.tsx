@@ -51,45 +51,65 @@ export function DecisionsList() {
 
       <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
         <div className="flex flex-wrap gap-4">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={filters.searchTerm || ''}
-            onChange={e => setFilters({ ...filters, searchTerm: e.target.value || undefined })}
-            className="px-3 py-2 border rounded-md"
-          />
-          <select
-            value={filters.category || ''}
-            onChange={e => setFilters({ ...filters, category: e.target.value || undefined })}
-            className="px-3 py-2 border rounded-md"
-          >
-            <option value="">All categories</option>
-            {CATEGORIES.map(c => (
-              <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-            ))}
-          </select>
-          <select
-            value={filters.stakes || ''}
-            onChange={e => setFilters({ ...filters, stakes: (e.target.value as Stakes) || undefined })}
-            className="px-3 py-2 border rounded-md"
-          >
-            <option value="">All stakes</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-          <select
-            value={filters.reviewed === undefined ? '' : filters.reviewed ? 'yes' : 'no'}
-            onChange={e => setFilters({
-              ...filters,
-              reviewed: e.target.value === '' ? undefined : e.target.value === 'yes'
-            })}
-            className="px-3 py-2 border rounded-md"
-          >
-            <option value="">All status</option>
-            <option value="no">Unreviewed</option>
-            <option value="yes">Reviewed</option>
-          </select>
+          <div>
+            <label htmlFor="search-input" className="sr-only">Search decisions</label>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="Search..."
+              value={filters.searchTerm || ''}
+              onChange={e => setFilters({ ...filters, searchTerm: e.target.value || undefined })}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Search decisions"
+            />
+          </div>
+          <div>
+            <label htmlFor="category-filter" className="sr-only">Filter by category</label>
+            <select
+              id="category-filter"
+              value={filters.category || ''}
+              onChange={e => setFilters({ ...filters, category: e.target.value || undefined })}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Filter by category"
+            >
+              <option value="">All categories</option>
+              {CATEGORIES.map(c => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="stakes-filter" className="sr-only">Filter by stakes</label>
+            <select
+              id="stakes-filter"
+              value={filters.stakes || ''}
+              onChange={e => setFilters({ ...filters, stakes: (e.target.value as Stakes) || undefined })}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Filter by stakes"
+            >
+              <option value="">All stakes</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="status-filter" className="sr-only">Filter by review status</label>
+            <select
+              id="status-filter"
+              value={filters.reviewed === undefined ? '' : filters.reviewed ? 'yes' : 'no'}
+              onChange={e => setFilters({
+                ...filters,
+                reviewed: e.target.value === '' ? undefined : e.target.value === 'yes'
+              })}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Filter by review status"
+            >
+              <option value="">All status</option>
+              <option value="no">Unreviewed</option>
+              <option value="yes">Reviewed</option>
+            </select>
+          </div>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -101,24 +121,34 @@ export function DecisionsList() {
           </label>
         </div>
         <div className="flex gap-4">
-          <select
-            value={sortField}
-            onChange={e => setSortField(e.target.value as SortField)}
-            className="px-3 py-2 border rounded-md"
-          >
-            <option value="date">Sort by date</option>
-            <option value="confidence">Sort by confidence</option>
-            <option value="reviewDate">Sort by review date</option>
-            <option value="stakes">Sort by stakes</option>
-          </select>
-          <select
-            value={sortOrder}
-            onChange={e => setSortOrder(e.target.value as SortOrder)}
-            className="px-3 py-2 border rounded-md"
-          >
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-          </select>
+          <div>
+            <label htmlFor="sort-field" className="sr-only">Sort by</label>
+            <select
+              id="sort-field"
+              value={sortField}
+              onChange={e => setSortField(e.target.value as SortField)}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Sort by"
+            >
+              <option value="date">Sort by date</option>
+              <option value="confidence">Sort by confidence</option>
+              <option value="reviewDate">Sort by review date</option>
+              <option value="stakes">Sort by stakes</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sort-order" className="sr-only">Sort order</label>
+            <select
+              id="sort-order"
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value as SortOrder)}
+              className="px-3 py-2 border rounded-md"
+              aria-label="Sort order"
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -144,25 +174,27 @@ export function DecisionsList() {
               <p className="text-center text-gray-500 py-8">No decisions found</p>
             )}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-4">
+              <nav className="flex items-center justify-center gap-2 pt-4" aria-label="Pagination">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  aria-label="Go to previous page"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600" aria-current="page">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  aria-label="Go to next page"
                 >
                   Next
                 </button>
-              </div>
+              </nav>
             )}
           </>
         )}

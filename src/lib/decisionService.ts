@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './db';
 import type { Decision, DecisionFilters, SortField, SortOrder } from './types';
+import { createBackup } from './backup';
 
 export function calculateReviewDate(date: string, horizonDays: number): string {
   const d = new Date(date);
@@ -120,6 +121,8 @@ export async function importDataWithValidation(
   mode: ImportMode
 ): Promise<{ imported: number; skipped: number }> {
   if (mode === 'replace') {
+    // Create backup before replacing all data
+    await createBackup('Before import (replace)');
     await db.decisions.clear();
     await db.decisions.bulkAdd(decisions);
     return { imported: decisions.length, skipped: 0 };
