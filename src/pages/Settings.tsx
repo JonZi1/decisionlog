@@ -21,6 +21,18 @@ export function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const confirmed = confirm(
+      'This will replace ALL existing decisions with the imported data. ' +
+      'Make sure you have a backup if needed.\n\nContinue with import?'
+    );
+
+    if (!confirmed) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
     try {
       const text = await file.text();
       const count = await importData(text);

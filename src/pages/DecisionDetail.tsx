@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getDecision, updateDecision, deleteDecision } from '../lib/decisionService';
+import { getDecision, updateDecision, deleteDecision, calculateReviewDate } from '../lib/decisionService';
 import { getConfidenceLabel } from '../lib/stats';
 import type { Decision, Rating } from '../lib/types';
 import { ReviewForm } from '../components/ReviewForm';
+import { DecisionForm } from '../components/DecisionForm';
 
 export function DecisionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [decision, setDecision] = useState<Decision | null>(null);
   const [showReview, setShowReview] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -51,11 +53,40 @@ export function DecisionDetail() {
     }
   };
 
+  const handleEdit = async (
+    data: Omit<Decision, 'id' | 'reviewDate' | 'reviewedAt' | 'actualOutcome' | 'rating' | 'lessonsLearned' | 'sameChoiceAgain'>
+  ) => {
+    const reviewDate = calculateReviewDate(data.date, data.horizonDays);
+    await updateDecision(decision.id, { ...data, reviewDate });
+    const updated = await getDecision(decision.id);
+    setDecision(updated || null);
+    setShowEdit(false);
+  };
+
   const stakesColors = {
     low: 'bg-green-100 text-green-800',
     medium: 'bg-yellow-100 text-yellow-800',
     high: 'bg-red-100 text-red-800',
   };
+
+  if (showEdit) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowEdit(false)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            &larr; Cancel edit
+          </button>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Decision</h1>
+          <DecisionForm onSubmit={handleEdit} initialData={decision} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,12 +94,20 @@ export function DecisionDetail() {
         <Link to="/decisions" className="text-blue-600 hover:text-blue-800">
           &larr; Back to decisions
         </Link>
-        <button
-          onClick={handleDelete}
-          className="text-red-600 hover:text-red-800 text-sm"
-        >
-          Delete
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setShowEdit(true)}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-800 text-sm"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">
